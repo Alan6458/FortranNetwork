@@ -1,12 +1,6 @@
 module FortranNetwork
 implicit none
 
-! type fNet
-!     type(layers), allocatable, dimension(:) :: layer
-!     integer, allocatable, dimension(:) :: layerSizes
-!     character (len = 1) :: activation
-! end type fNet
-
 type fNetLayer
     ! change from CrapPyNetwork: input layer no longer has biases
     ! Note: this feature may have not been in CrapPyNetwork, I need to check
@@ -32,14 +26,7 @@ function initiateNetwork(layerNodes, activation)
     integer i
     layers = size(layerNodes)
 
-    ! allocates space for stuff and then fills the variables
     ! Network only needs layers-1 amount of weights/layers
-
-    ! allocate(initiateNetwork%layer(layers-1))
-    ! allocate(initiateNetwork%layerSizes(layers))
-    ! initiateNetwork%layerSizes = layerNodes
-    ! initiateNetwork%activation = activation
-
     ! allocating space for each layer of weights and biases
     do i = 1, layers-1
         ! Again, only needs layers-1 amout of weights/layers which is why it is i and i+1 being used
@@ -47,6 +34,7 @@ function initiateNetwork(layerNodes, activation)
         allocate(initiateNetwork(i)%weights(layerNodes(i), layerNodes(i+1)))
         allocate(initiateNetwork(i)%biases(layerNodes(i+1)))
 
+        ! Assigns values to activation function and layer size
         initiateNetwork(i)%activation = activation(i:i)
         initiateNetwork(i)%layerSize = layerNodes(i+1)
 
@@ -71,7 +59,7 @@ function forwardProp(network, input)
     ! Again, this may be an indexing issue later on
     allocate(forwardProp(1)%outLayer(size(input)))
     forwardProp(1)%outLayer = input
-    ! Allocates space for next layer and then performs matrix multiplication and adds biases
+    ! Allocates space for next layer and performs matrix multiplication and adds biases, then does activation
     do i = 2, size(network)+1
         ! Here's (just the beginning of) the indexing nightmare I predicted earlier
         allocate(forwardProp(i)%outlayer(network(i-1)%layerSize))
