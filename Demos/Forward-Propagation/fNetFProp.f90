@@ -20,7 +20,7 @@ program fNetwork
     print *, fn(1)%activation
     print *, fn(1)%layerSize
     print *, ""
-    res = forwardProp(fn, (/3, 4/))
+    res = forwardProp(fn, (/3.0, 4.0/))
     do i = 1, 2
         print *, res(i)%outLayer
     end do
