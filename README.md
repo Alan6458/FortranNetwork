@@ -10,7 +10,7 @@ You probably shouldn't - this was made to further my own understanding of neural
 
 ## To compile
 
-Note: Currently, FortranNetwork does not seem to work with gfortran because the gfortran compiler has issues with array allocation. However, FortranNetwork, as of now, works well with the Intel FORTRAN compiler.
+Note: Although gfortran currently compiles and works with FortranNetwork, it is not recommended to be used because of issues most likely relating to allocatable arrays. Intel's FORTRAN compiler is currently recommended.
 
 ### ifx
 

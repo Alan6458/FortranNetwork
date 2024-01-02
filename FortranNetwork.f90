@@ -62,6 +62,7 @@ function forwardProp(network, input)
         ! Here's (just the beginning of) the indexing nightmare I predicted earlier
         allocate(forwardProp(i)%outLayer(network(i-1)%layerSize))
         forwardProp(i)%outLayer = matmul(forwardProp(i-1)%outLayer, network(i-1)%weights) + network(i-1)%biases
+        deallocate(forwardProp(i-1)%outLayer)
         call activationFunction(forwardProp(i)%outLayer, network(i-1)%activation)
     end do
 end function forwardProp
@@ -172,7 +173,7 @@ subroutine costFunctionDerivative(nodeVals, goal, costType)
     end if
 end subroutine costFunctionDerivative
 
-function sgd(fnet, input, goal, costFunc)
+subroutine sgd(sgdOut, fnet, input, goal, costFunc)
     implicit none
 
     type(fNetLayer), dimension(:), intent(IN) :: fnet
@@ -180,7 +181,7 @@ function sgd(fnet, input, goal, costFunc)
     real (kind = 4), dimension(:), intent(IN) :: input
     real (kind = 4), dimension(:), intent(IN) :: goal
     character (len = 1), intent(IN) :: costFunc
-    type(fNetLayer), dimension(size(fnet)) :: sgd
+    type(fNetLayer), dimension(:), intent(INOUT) :: sgdOut
     integer :: i, j
 
     ! Forward Propagation (a lot of this code was stolen from forwardProp)
@@ -210,22 +211,19 @@ function sgd(fnet, input, goal, costFunc)
     ! v Changing last layer activations into its derivative v
     call costFunctionDerivative(activations(size(activations))%outLayer, goal, costFunc)
     do i = size(fnet), 1, -1
-        ! Allocates space
-        allocate(sgd(i)%weights(size(activations(i)%outLayer), fnet(i)%layerSize))
-        allocate(sgd(i)%biases(fnet(i)%layerSize))
-
         ! Derivative of biases
-        sgd(i)%biases = activations(i+1)%outLayer*weightedSums(i+1)%outLayer
+        sgdOut(i)%biases = activations(i+1)%outLayer*weightedSums(i+1)%outLayer
+        ! Deallocating unnecessary arrays
         deallocate(weightedSums(i+1)%outLayer)
         deallocate(activations(i+1)%outLayer)
         ! Derivative of weights and activations in last/next (depending on perspective) layer
         do j = 1, size(activations(i)%outLayer)
-            sgd(i)%weights(j, :) = sgd(i)%biases * fnet(i)%weights(j, :) * activations(i)%outLayer(j)
+            sgdOut(i)%weights(j, :) = sgdOut(i)%biases * fnet(i)%weights(j, :) * activations(i)%outLayer(j)
             ! After being used, can now be reassigned to its derivative
-            activations(i)%outLayer(j) = sum(sgd(i)%weights(j, :))
+            activations(i)%outLayer(j) = sum(sgdOut(i)%weights(j, :))
         end do
     end do
-end function sgd
+end subroutine sgd
 
 ! Stolen from last year - update params: weight_new = weight - learningRate * dC/dweight
 subroutine updateParams(fnet, sgdArr, learningRate)
