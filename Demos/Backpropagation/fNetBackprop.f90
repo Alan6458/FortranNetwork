@@ -6,14 +6,13 @@ program fNetwork
     character (len = size(ln)-1) :: a
     character (len = 1) :: c
     integer :: i, j
-    type(fNetLayer), dimension(size(ln)-1) :: fn
-    type(fNetLayer), dimension(200, size(ln)-1) :: fnSGD
+    type(fNetLayer), dimension(size(ln)-1) :: fn, fnSGD
     type(fNetOutLayer), dimension(size(ln)) :: fnFOut
     real (kind = 4), dimension(2) :: fnOut
     real (kind = 4), dimension(2) :: netInput, netOutputGoal
     real (kind = 4) :: learnRate
     integer :: epochs
-    integer :: batchSize = size(fnSGD, dim = 1)
+    integer :: batchSize
     integer :: numAll
     real :: numCorrect
     numAll = 100
@@ -38,6 +37,8 @@ program fNetwork
 
     ! Epochs to train for
     epochs = 20
+    ! Mini-Batch Size
+    batchSize = 200
     ! Learning rate
     learnRate = 0.5
     ! Activation function(s)
@@ -46,9 +47,12 @@ program fNetwork
     c = "s"
     netOutputGoal = (/0.0001, 0.9999/)
     fn = initiateNetwork(ln, a)
+    fnSGD = initiateNetwork(ln, a)
 
-    do i = 1, batchSize
-        fnSGD(i, :) = fn
+    ! Sets all values of fnSGD to zero (updateParams automatically does this)
+    do i = 1, size(fnSGD)
+        fnSGD(i)%weights = 0
+        fnSGD(i)%biases = 0
     end do
 
     ! Prints the network's parameters
@@ -69,10 +73,10 @@ program fNetwork
         ! Stochastic Gradient Descent
         do j = 1, batchSize
             call random_number(netInput)
-            call sgd(fnSGD(j, :), fn, netInput, netOutputGoal, c)
+            call sgd(fnSGD, fn, netInput, netOutputGoal, c)
         end do
         ! Updating weights and biases
-        call updateParams(fn, fnSGD, learnRate)
+        call updateParams(fn, fnSGD, learnRate, batchSize)
 
         ! Collecting data
         numCorrect = 0
