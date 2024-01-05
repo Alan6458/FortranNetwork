@@ -177,7 +177,7 @@ subroutine sgd(sgdOut, fnet, input, goal, costFunc)
     implicit none
 
     type(fNetLayer), dimension(:), intent(IN) :: fnet
-    type(fNetOutLayer), dimension(size(fnet)+1) :: activations, weightedSums, tempArr
+    type(fNetOutLayer), dimension(size(fnet)+1) :: activations, weightedSums
     real (kind = 4), dimension(:), intent(IN) :: input
     real (kind = 4), dimension(:), intent(IN) :: goal
     character (len = 1), intent(IN) :: costFunc
@@ -195,7 +195,6 @@ subroutine sgd(sgdOut, fnet, input, goal, costFunc)
         ! Allocating space
         allocate(activations(i)%outLayer(fnet(i-1)%layerSize))
         allocate(weightedSums(i)%outLayer(fnet(i-1)%layerSize))
-        allocate(tempArr(i)%outLayer(fnet(i-1)%layerSize))
         ! Weighted sums are calculated; activations are set equal to them (no need to do same calculation twice)
         weightedSums(i)%outLayer = matmul(activations(i-1)%outLayer, fnet(i-1)%weights) + fnet(i-1)%biases
         activations(i)%outLayer = weightedSums(i)%outLayer
@@ -219,13 +218,11 @@ subroutine sgd(sgdOut, fnet, input, goal, costFunc)
         deallocate(activations(i+1)%outLayer)
         ! Derivative of weights and activations in last/next (depending on perspective) layer
         do j = 1, size(activations(i)%outLayer)
-            tempArr(i+1)%outLayer = weightedSums(i+1)%outLayer * fnet(i)%weights(j, :) * activations(i)%outLayer(j)
-            sgdOut(i)%weights(j, :) = sgdOut(i)%weights(j, :) + tempArr(i+1)%outLayer
+            sgdOut(i)%weights(j, :) = sgdOut(i)%weights(j, :) + weightedSums(i+1)%outLayer * activations(i)%outLayer(j)
             ! After being used, can now be reassigned to its derivative
-            activations(i)%outLayer(j) = sum(tempArr(i+1)%outLayer)
+            activations(i)%outLayer(j) = sum(weightedSums(i+1)%outLayer * fnet(i)%weights(j, :))
         end do
         deallocate(weightedSums(i+1)%outLayer)
-        deallocate(tempArr(i+1)%outLayer)
     end do
 
     ! Deallocate
