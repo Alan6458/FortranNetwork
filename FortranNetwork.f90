@@ -219,9 +219,10 @@ subroutine sgd(sgdOut, fnet, input, goal, costFunc)
         ! Derivative of weights and activations in last/next (depending on perspective) layer
         do j = 1, size(activations(i)%outLayer)
             sgdOut(i)%weights(j, :) = sgdOut(i)%weights(j, :) + weightedSums(i+1)%outLayer * activations(i)%outLayer(j)
-            ! After being used, can now be reassigned to its derivative
-            activations(i)%outLayer(j) = sum(weightedSums(i+1)%outLayer * fnet(i)%weights(j, :))
         end do
+        ! After being used, can now be reassigned to its derivative
+        activations(i)%outLayer = matmul(weightedSums(i+1)%outLayer, transpose(fnet(i)%weights))
+        ! Deallocating unnecessary arrays
         deallocate(weightedSums(i+1)%outLayer)
     end do
 
