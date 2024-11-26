@@ -5,10 +5,10 @@ program fNetwork
     integer :: ln(2) = (/2, 3/)
     character (len = 1) :: a
     integer :: i
-    type(fNetLayer), dimension(1) :: fn
-    type(fNetOutLayer), dimension(size(ln)) :: res
+    type(net_layer), dimension(1) :: fn
+    type(net_out_layer), dimension(size(ln)) :: res
     a = "r"
-    fn = initiateNetwork(ln, a)
+    fn = init_net(ln, a)
     fn(1)%weights(1,:) = (/2, 3, 5/)
     fn(1)%weights(2,:) = (/6, 7, 4/)
     fn(1)%biases = (/2, 3, 4/)
@@ -18,11 +18,11 @@ program fNetwork
     print *, ""
     print *, fn(1)%biases
     print *, fn(1)%activation
-    print *, fn(1)%layerSize
+    print *, fn(1)%layer_size
     print *, ""
-    res = forwardProp(fn, (/3.0, 4.0/))
+    res = fwd_prop(fn, (/3.0, 4.0/))
     do i = 1, 2
-        print *, res(i)%outLayer
+        print *, res(i)%out_layer
     end do
-    print *, forwardPropAns(res)
+    print *, fwd_prop_res(res)
 end program fNetwork

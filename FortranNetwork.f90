@@ -1,207 +1,207 @@
 module FortranNetwork
 implicit none
 
-type fNetLayer
+type net_layer
     ! change from CrapPyNetwork: input layer no longer has biases
     ! Note: this feature may have not been in CrapPyNetwork, I need to check
-    real (kind = 4), allocatable, dimension(:,:) :: weights
-    real (kind = 4), allocatable, dimension(:) :: biases
-    integer :: layerSize
+    real, allocatable, dimension(:,:) :: weights
+    real, allocatable, dimension(:) :: biases
+    integer :: layer_size
     character :: activation
-end type fNetLayer
+end type net_layer
 
-type fNetOutLayer
-    real (kind = 4), allocatable, dimension(:) :: outLayer
-end type fNetOutLayer
+type net_out_layer
+    real, allocatable, dimension(:) :: out_layer
+end type net_out_layer
 
 contains
 
-function initiateNetwork(layerNodes, activation)
+function init_net(layer_nodes, activation)
     implicit none
 
-    integer, dimension(:), intent(IN) :: layerNodes
-    type(fNetLayer), dimension(size(layerNodes)-1) :: initiateNetwork
-    character (len=size(layerNodes)-1), intent(IN) :: activation
+    integer, dimension(:), intent(IN) :: layer_nodes
+    type(net_layer), dimension(size(layer_nodes)-1) :: init_net
+    character (len=size(layer_nodes)-1), intent(IN) :: activation
     integer i
 
     ! Network only needs layers-1 amount of weights/layers
     ! allocating space for each layer of weights and biases
-    do i = 1, size(layerNodes)-1
+    do i = 1, size(layer_nodes)-1
         ! Again, only needs layers-1 amout of weights/layers which is why it is i and i+1 being used
         ! (I predict this may be an indexing nightmare later on)
-        allocate(initiateNetwork(i)%weights(layerNodes(i), layerNodes(i+1)))
-        allocate(initiateNetwork(i)%biases(layerNodes(i+1)))
+        allocate(init_net(i)%weights(layer_nodes(i), layer_nodes(i+1)))
+        allocate(init_net(i)%biases(layer_nodes(i+1)))
 
         ! Assigns values to activation function and layer size
-        initiateNetwork(i)%activation = activation(i:i)
-        initiateNetwork(i)%layerSize = layerNodes(i+1)
+        init_net(i)%activation = activation(i:i)
+        init_net(i)%layer_size = layer_nodes(i+1)
 
-        ! generates random floats between 0 and 1 and makes them between -1 and 1
-        call random_number(initiateNetwork(i)%weights)
-        initiateNetwork(i)%weights = initiateNetwork(i)%weights * 2 - 1
+        ! generates random floats between 0 and 1 and makes them between -2.718 and 2.718
+        call random_number(init_net(i)%weights)
+        init_net(i)%weights = init_net(i)%weights * 5.436 - 2.718
 
-        call random_number(initiateNetwork(i)%biases)
-        initiateNetwork(i)%biases = initiateNetwork(i)%biases * 2 - 1
+        call random_number(init_net(i)%biases)
+        init_net(i)%biases = init_net(i)%biases * 5.436 - 2.718
     end do
-end function initiateNetwork
+end function init_net
 
-function forwardProp(network, input)
+function fwd_prop(network, input)
     implicit none
 
-    type(fNetLayer), dimension(:), intent(IN) :: network
-    real (kind = 4), dimension(:), intent(IN) :: input
-    type(fNetOutLayer), dimension(size(network)+1) :: forwardProp
+    type(net_layer), dimension(:), intent(IN) :: network
+    real, dimension(:), intent(IN) :: input
+    type(net_out_layer), dimension(size(network)+1) :: fwd_prop
     integer i
 
     ! The input layer - Should this be included in output?
     ! Again, this may be an indexing issue later on
-    allocate(forwardProp(1)%outLayer(size(input)))
-    forwardProp(1)%outLayer = input
+    allocate(fwd_prop(1)%out_layer(size(input)))
+    fwd_prop(1)%out_layer = input
     ! Allocates space for next layer and performs matrix multiplication and adds biases, then does activation
     do i = 2, size(network)+1
         ! Here's (just the beginning of) the indexing nightmare I predicted earlier
-        allocate(forwardProp(i)%outLayer(network(i-1)%layerSize))
-        forwardProp(i)%outLayer = matmul(forwardProp(i-1)%outLayer, network(i-1)%weights) + network(i-1)%biases
-        deallocate(forwardProp(i-1)%outLayer)
-        call activationFunction(forwardProp(i)%outLayer, network(i-1)%activation)
+        allocate(fwd_prop(i)%out_layer(network(i-1)%layer_size))
+        fwd_prop(i)%out_layer = matmul(fwd_prop(i-1)%out_layer, network(i-1)%weights) + network(i-1)%biases
+        deallocate(fwd_prop(i-1)%out_layer)
+        call activation_func(fwd_prop(i)%out_layer, network(i-1)%activation)
     end do
-end function forwardProp
+end function fwd_prop
 
-! This outputs the index of the max output node of an fNetOutLayer object
-function forwardPropAns(fPropOut)
+! This outputs the index of the max output node of an net_out_layer object
+function fwd_prop_res(fwd_prop_out)
     implicit none
     
-    type(fNetOutLayer), dimension(:), intent(IN) :: fPropOut
-    integer, dimension(1) :: preAns
-    integer forwardPropAns
-    preAns = maxloc(fPropOut(size(fPropOut))%outLayer)
-    forwardPropAns = preAns(1)
-end function forwardPropAns
+    type(net_out_layer), dimension(:), intent(IN) :: fwd_prop_out
+    integer, dimension(1) :: pre_res
+    integer fwd_prop_res
+    pre_res = maxloc(fwd_prop_out(size(fwd_prop_out))%out_layer)
+    fwd_prop_res = pre_res(1)
+end function fwd_prop_res
 
 ! Note: this is just temporary, may need a faster method
 ! Need to have function as a variable in the layer type instead of char, like lambda in Python
-subroutine activationFunction(nodeVals, activationType)
+subroutine activation_func(node_vals, activation_type)
     implicit none
 
-    character (len = 1), intent(IN) :: activationType
-    real (kind = 4), dimension(:), intent(INOUT) :: nodeVals
+    character (len = 1), intent(IN) :: activation_type
+    real, dimension(:), intent(INOUT) :: node_vals
     
-    if (activationType == "s") then
+    if (activation_type == "s") then
         ! Sigmoid
-        nodeVals = 1/(1+exp(-nodeVals))
-    else if (activationType == "t") then
+        node_vals = 1/(1+exp(-node_vals))
+    else if (activation_type == "t") then
         ! TanH
-        nodeVals = tanh(nodeVals)
-    else if (activationType == "r") then
+        node_vals = tanh(node_vals)
+    else if (activation_type == "r") then
         ! ReLU
-        ! nodeVals = (nodeVals + abs(nodeVals))/2
-        where (nodeVals < 0.0) nodeVals = 0.0
-    else if (activationType == "S") then
+        ! node_vals = (node_vals + abs(node_vals))/2
+        where (node_vals < 0.0) node_vals = 0.0
+    else if (activation_type == "S") then
         ! SiLU
-        nodeVals = nodeVals/(1+exp(-nodeVals))
-    else if (activationType == "m") then
+        node_vals = node_vals/(1+exp(-node_vals))
+    else if (activation_type == "m") then
         ! Softmax
-        nodeVals = exp(nodeVals)/sum(exp(nodeVals))
+        node_vals = exp(node_vals)/sum(exp(node_vals))
     end if
-end subroutine activationFunction
+end subroutine activation_func
 
-subroutine activationFunctionDerivative(nodeVals, activationType)
+subroutine activation_func_derivative(node_vals, activation_type)
     implicit none
 
-    character (len = 1), intent(IN) :: activationType
-    real (kind = 4), dimension(:), intent(INOUT) :: nodeVals
+    character (len = 1), intent(IN) :: activation_type
+    real, dimension(:), intent(INOUT) :: node_vals
     
     ! This is like activation function but the derivative (for backprop)
 
-    if (activationType == "s") then
+    if (activation_type == "s") then
         ! Sigmoid
-        nodeVals = exp(-nodeVals)/((1+exp(-nodeVals))**2)
-    else if (activationType == "t") then
+        node_vals = exp(-node_vals)/((1+exp(-node_vals))**2)
+    else if (activation_type == "t") then
         ! TanH
-        nodeVals = 1-(tanh(nodeVals)**2)
-    else if (activationType == "r") then
+        node_vals = 1-(tanh(node_vals)**2)
+    else if (activation_type == "r") then
         ! ReLU
-        ! nodeVals = (nodeVals/abs(nodeVals)+1)/2
-        where (nodeVals >= 0.0) nodeVals = 1.0
-        where (nodeVals < 0.0) nodeVals = 0.0
-    else if (activationType == "S") then
+        ! node_vals = (node_vals/abs(node_vals)+1)/2
+        where (node_vals >= 0.0) node_vals = 1.0
+        where (node_vals < 0.0) node_vals = 0.0
+    else if (activation_type == "S") then
         ! SiLU
-        nodeVals = (1+exp(-nodeVals)*(1+nodeVals))/((1+exp(-nodeVals))**2)
-    else if (activationType == "m") then
+        node_vals = (1+exp(-node_vals)*(1+node_vals))/((1+exp(-node_vals))**2)
+    else if (activation_type == "m") then
         ! Softmax (this is gonna be slow but whatever)
-        nodeVals = (exp(nodeVals)/sum(exp(nodeVals)))*(1-(exp(nodeVals)/sum(exp(nodeVals))))
+        node_vals = (exp(node_vals)/sum(exp(node_vals)))*(1-(exp(node_vals)/sum(exp(node_vals))))
     end if
-end subroutine activationFunctionDerivative
+end subroutine activation_func_derivative
 
-subroutine costFunction(nodeVals, goal, costType)
+subroutine cost_func(node_vals, goal, cost_type)
     implicit none
 
-    character (len = 1), intent(IN) :: costType
-    real (kind = 4), dimension(:), intent(IN) :: goal
-    real (kind = 4), dimension(:), intent(INOUT) :: nodeVals
+    character (len = 1), intent(IN) :: cost_type
+    real, dimension(:), intent(IN) :: goal
+    real, dimension(:), intent(INOUT) :: node_vals
 
-    if (costType == "s") then
+    if (cost_type == "s") then
         ! Mean Squared Error (MSE)
-        nodeVals = (nodeVals-goal)**2
-    else if (costType == "a") then
+        node_vals = (node_vals-goal)**2
+    else if (cost_type == "a") then
         ! Mean Absolute Error (MAE)
-        nodeVals = abs(nodeVals-goal)
-    else if (costType == "c") then
+        node_vals = abs(node_vals-goal)
+    else if (cost_type == "c") then
         ! Softmax Cross-Entropy Loss
-        nodeVals = -goal*log(exp(nodeVals)/sum(exp(nodeVals)))
+        node_vals = -goal*log(exp(node_vals)/sum(exp(node_vals)))
     end if
-end subroutine costFunction
+end subroutine cost_func
 
-subroutine costFunctionDerivative(nodeVals, goal, costType)
+subroutine cost_func_derivative(node_vals, goal, cost_type)
     implicit none
 
-    character (len = 1), intent(IN) :: costType
-    real (kind = 4), dimension(:), intent(IN) :: goal
-    real (kind = 4), dimension(:), intent(INOUT) :: nodeVals
+    character (len = 1), intent(IN) :: cost_type
+    real, dimension(:), intent(IN) :: goal
+    real, dimension(:), intent(INOUT) :: node_vals
 
-    if (costType == "s") then
+    if (cost_type == "s") then
         ! Mean Squared Error (MSE)
-        nodeVals = 2 * (nodeVals-goal)
-    else if (costType == "a") then
+        node_vals = 2 * (node_vals-goal)
+    else if (cost_type == "a") then
         ! Mean Absolute Error (MAE)
-        ! nodeVals = nodeVals/abs(nodeVals)
-        where (nodeVals >= 0.0) nodeVals = 1.0
-        where (nodeVals < 0.0) nodeVals = -1.0
-    else if (costType == "c") then
+        ! node_vals = node_vals/abs(node_vals)
+        where (node_vals >= 0.0) node_vals = 1.0
+        where (node_vals < 0.0) node_vals = -1.0
+    else if (cost_type == "c") then
         ! Softmax Cross-Entropy Loss
-        nodeVals = exp(nodeVals)/sum(exp(nodeVals))-goal
+        node_vals = exp(node_vals)/sum(exp(node_vals))-goal
     end if
-end subroutine costFunctionDerivative
+end subroutine cost_func_derivative
 
-subroutine sgd(sgdOut, fnet, input, goal, costFunc)
+subroutine sgd(sgd_out, net, input, goal, net_cost_func)
     implicit none
 
-    type(fNetLayer), dimension(:), intent(IN) :: fnet
-    type(fNetOutLayer), dimension(size(fnet)+1) :: activations, weightedSums
-    real (kind = 4), dimension(:), intent(IN) :: input
-    real (kind = 4), dimension(:), intent(IN) :: goal
-    character (len = 1), intent(IN) :: costFunc
-    type(fNetLayer), dimension(:), intent(INOUT) :: sgdOut
+    type(net_layer), dimension(:), intent(IN) :: net
+    type(net_out_layer), dimension(size(net)+1) :: activations, weighted_sums
+    real, dimension(:), intent(IN) :: input
+    real, dimension(:), intent(IN) :: goal
+    character (len = 1), intent(IN) :: net_cost_func
+    type(net_layer), dimension(:), intent(INOUT) :: sgd_out
     integer :: i, j
 
-    ! Forward Propagation (a lot of this code was stolen from forwardProp)
+    ! Forward Propagation (a lot of this code was stolen from fwd_prop)
 
     ! Allocates space and assignes values to first layer of weighted sums and activations
-    allocate(activations(1)%outLayer(size(input)))
-    allocate(weightedSums(1)%outLayer(size(input)))
-    activations(1)%outLayer = input
-    weightedSums(1)%outLayer = input
-    do i = 2, size(fnet)+1
+    allocate(activations(1)%out_layer(size(input)))
+    allocate(weighted_sums(1)%out_layer(size(input)))
+    activations(1)%out_layer = input
+    weighted_sums(1)%out_layer = input
+    do i = 2, size(net)+1
         ! Allocating space
-        allocate(activations(i)%outLayer(fnet(i-1)%layerSize))
-        allocate(weightedSums(i)%outLayer(fnet(i-1)%layerSize))
+        allocate(activations(i)%out_layer(net(i-1)%layer_size))
+        allocate(weighted_sums(i)%out_layer(net(i-1)%layer_size))
         ! Weighted sums are calculated; activations are set equal to them (no need to do same calculation twice)
-        weightedSums(i)%outLayer = matmul(activations(i-1)%outLayer, fnet(i-1)%weights) + fnet(i-1)%biases
-        activations(i)%outLayer = weightedSums(i)%outLayer
+        weighted_sums(i)%out_layer = matmul(activations(i-1)%out_layer, net(i-1)%weights) + net(i-1)%biases
+        activations(i)%out_layer = weighted_sums(i)%out_layer
         ! Activations are activated and weighted sums have activation function derivatives done to them
         ! Doing the derivatives now, not in backpropagation - after this step, weighted sums no longer weighted sums
-        call activationFunction(activations(i)%outLayer, fnet(i-1)%activation)
-        call activationFunctionDerivative(weightedSums(i)%outLayer, fnet(i-1)%activation)
+        call activation_func(activations(i)%out_layer, net(i-1)%activation)
+        call activation_func_derivative(weighted_sums(i)%out_layer, net(i-1)%activation)
     end do
 
     ! Back Propagation
@@ -209,45 +209,45 @@ subroutine sgd(sgdOut, fnet, input, goal, costFunc)
 
     ! After this step, array "activations" is repurposed step-by-step into their derivatives with repect to the cost
     ! v Changing last layer activations into its derivative v
-    call costFunctionDerivative(activations(size(activations))%outLayer, goal, costFunc)
-    do i = size(fnet), 1, -1
+    call cost_func_derivative(activations(size(activations))%out_layer, goal, net_cost_func)
+    do i = size(net), 1, -1
         ! Derivative of biases
-        weightedSums(i+1)%outLayer = activations(i+1)%outLayer*weightedSums(i+1)%outLayer
-        sgdOut(i)%biases = sgdOut(i)%biases + weightedSums(i+1)%outLayer
+        weighted_sums(i+1)%out_layer = activations(i+1)%out_layer*weighted_sums(i+1)%out_layer
+        sgd_out(i)%biases = sgd_out(i)%biases + weighted_sums(i+1)%out_layer
         ! Deallocating unnecessary arrays
-        deallocate(activations(i+1)%outLayer)
+        deallocate(activations(i+1)%out_layer)
         ! Derivative of weights and activations in last/next (depending on perspective) layer
-        do j = 1, size(activations(i)%outLayer)
-            sgdOut(i)%weights(j, :) = sgdOut(i)%weights(j, :) + weightedSums(i+1)%outLayer * activations(i)%outLayer(j)
+        do j = 1, size(activations(i)%out_layer)
+            sgd_out(i)%weights(j, :) = sgd_out(i)%weights(j, :) + weighted_sums(i+1)%out_layer * activations(i)%out_layer(j)
         end do
         ! After being used, can now be reassigned to its derivative
-        activations(i)%outLayer = matmul(weightedSums(i+1)%outLayer, transpose(fnet(i)%weights))
+        activations(i)%out_layer = matmul(weighted_sums(i+1)%out_layer, transpose(net(i)%weights))
         ! Deallocating unnecessary arrays
-        deallocate(weightedSums(i+1)%outLayer)
+        deallocate(weighted_sums(i+1)%out_layer)
     end do
 
     ! Deallocate
-    deallocate(activations(1)%outLayer)
-    deallocate(weightedSums(1)%outLayer)
+    deallocate(activations(1)%out_layer)
+    deallocate(weighted_sums(1)%out_layer)
 end subroutine sgd
 
-! Stolen from last year - update params: weight_new = weight - learningRate * dC/dweight
-subroutine updateParams(fnet, sgdArr, learningRate, numBatches)
+! Stolen from last year - update params: weight_new = weight - learning_rate * dC/dweight
+subroutine update_params(net, sgd_arr, learning_rate, num_batches)
     implicit none
 
-    type(fNetLayer), dimension(:), intent(INOUT) :: fnet, sgdArr
-    real (kind = 4), intent(IN) :: learningRate
-    integer, intent(IN) :: numBatches
-    real (kind = 4) :: lR
+    type(net_layer), dimension(:), intent(INOUT) :: net, sgd_arr
+    real, intent(IN) :: learning_rate
+    integer, intent(IN) :: num_batches
+    real :: lr
     integer :: i
-    lR = learningRate/numBatches
+    lr = learning_rate/num_batches
 
-    do i = 1, size(fnet)
-        fnet(i)%weights = fnet(i)%weights - lR * sgdArr(i)%weights
-        fnet(i)%biases = fnet(i)%biases - lR * sgdArr(i)%biases
-        sgdArr(i)%weights = 0
-        sgdArr(i)%biases = 0
+    do i = 1, size(net)
+        net(i)%weights = net(i)%weights - lr * sgd_arr(i)%weights
+        net(i)%biases = net(i)%biases - lr * sgd_arr(i)%biases
+        sgd_arr(i)%weights = 0
+        sgd_arr(i)%biases = 0
     end do
-end subroutine updateParams
+end subroutine update_params
 
 end module FortranNetwork
