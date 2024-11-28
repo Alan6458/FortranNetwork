@@ -8,7 +8,7 @@ program fNetwork
     type(net_layer), dimension(1) :: fn
     type(net_out_layer), dimension(size(ln)) :: res
     a = "r"
-    fn = init_net(ln, a)
+    call init_net(fn, ln, a)
     fn(1)%weights(1,:) = (/2, 3, 5/)
     fn(1)%weights(2,:) = (/6, 7, 4/)
     fn(1)%biases = (/2, 3, 4/)

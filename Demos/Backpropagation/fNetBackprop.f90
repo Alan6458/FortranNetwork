@@ -50,8 +50,8 @@ program fNetwork
     ! Cost function
     c = "s"
     net_out_goal = (/0.0001, 0.9999/)
-    fn = init_net(ln, a)
-    fn_sgd = init_net(ln, a)
+    call init_net(fn, ln, a)
+    call init_net(fn_sgd, ln, a)
 
     ! Sets all values of fn_sgd to zero (updateParams automatically does this)
     do i = 1, size(fn_sgd)

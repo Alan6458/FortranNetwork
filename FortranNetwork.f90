@@ -16,11 +16,11 @@ end type net_out_layer
 
 contains
 
-function init_net(layer_nodes, activation)
+subroutine init_net(out_net, layer_nodes, activation)
     implicit none
 
     integer, dimension(:), intent(IN) :: layer_nodes
-    type(net_layer), dimension(size(layer_nodes)-1) :: init_net
+    type(net_layer), dimension(size(layer_nodes)-1), intent(OUT) :: out_net
     character (len=size(layer_nodes)-1), intent(IN) :: activation
     integer i
 
@@ -29,21 +29,21 @@ function init_net(layer_nodes, activation)
     do i = 1, size(layer_nodes)-1
         ! Again, only needs layers-1 amout of weights/layers which is why it is i and i+1 being used
         ! (I predict this may be an indexing nightmare later on)
-        allocate(init_net(i)%weights(layer_nodes(i), layer_nodes(i+1)))
-        allocate(init_net(i)%biases(layer_nodes(i+1)))
+        allocate(out_net(i)%weights(layer_nodes(i), layer_nodes(i+1)))
+        allocate(out_net(i)%biases(layer_nodes(i+1)))
 
         ! Assigns values to activation function and layer size
-        init_net(i)%activation = activation(i:i)
-        init_net(i)%layer_size = layer_nodes(i+1)
+        out_net(i)%activation = activation(i:i)
+        out_net(i)%layer_size = layer_nodes(i+1)
 
         ! generates random floats between 0 and 1 and makes them between -2.718 and 2.718
-        call random_number(init_net(i)%weights)
-        init_net(i)%weights = init_net(i)%weights * 5.436 - 2.718
+        call random_number(out_net(i)%weights)
+        out_net(i)%weights = out_net(i)%weights * 2 - 1
 
-        call random_number(init_net(i)%biases)
-        init_net(i)%biases = init_net(i)%biases * 5.436 - 2.718
+        call random_number(out_net(i)%biases)
+        out_net(i)%biases = out_net(i)%biases * 2 - 1
     end do
-end function init_net
+end subroutine init_net
 
 function fwd_prop(network, input)
     implicit none
@@ -230,6 +230,86 @@ subroutine sgd(sgd_out, net, input, goal, net_cost_func)
     deallocate(activations(1)%out_layer)
     deallocate(weighted_sums(1)%out_layer)
 end subroutine sgd
+
+! sgd adds values to sgd_out, sgd_replace replaces the values of sgd_out
+subroutine sgd_replace(sgd_out, net, input, goal, net_cost_func)
+    implicit none
+
+    type(net_layer), dimension(:), intent(IN) :: net
+    type(net_out_layer), dimension(size(net)+1) :: activations, weighted_sums
+    real, dimension(:), intent(IN) :: input
+    real, dimension(:), intent(IN) :: goal
+    character (len = 1), intent(IN) :: net_cost_func
+    type(net_layer), dimension(:), intent(INOUT) :: sgd_out
+    integer :: i, j
+
+    ! Forward Propagation (a lot of this code was stolen from fwd_prop)
+
+    ! Allocates space and assignes values to first layer of weighted sums and activations
+    allocate(activations(1)%out_layer(size(input)))
+    allocate(weighted_sums(1)%out_layer(size(input)))
+    activations(1)%out_layer = input
+    weighted_sums(1)%out_layer = input
+    do i = 2, size(net)+1
+        ! Allocating space
+        allocate(activations(i)%out_layer(net(i-1)%layer_size))
+        allocate(weighted_sums(i)%out_layer(net(i-1)%layer_size))
+        ! Weighted sums are calculated; activations are set equal to them (no need to do same calculation twice)
+        weighted_sums(i)%out_layer = matmul(activations(i-1)%out_layer, net(i-1)%weights) + net(i-1)%biases
+        activations(i)%out_layer = weighted_sums(i)%out_layer
+        ! Activations are activated and weighted sums have activation function derivatives done to them
+        ! Doing the derivatives now, not in backpropagation - after this step, weighted sums no longer weighted sums
+        call activation_func(activations(i)%out_layer, net(i-1)%activation)
+        call activation_func_derivative(weighted_sums(i)%out_layer, net(i-1)%activation)
+    end do
+
+    ! Back Propagation
+    ! Indexing beyond here looks bad but is somehow understandable (thank you FORTRAN for having 1-indexed arrays)
+
+    ! After this step, array "activations" is repurposed step-by-step into their derivatives with repect to the cost
+    ! v Changing last layer activations into its derivative v
+    call cost_func_derivative(activations(size(activations))%out_layer, goal, net_cost_func)
+    do i = size(net), 1, -1
+        ! Derivative of biases
+        weighted_sums(i+1)%out_layer = activations(i+1)%out_layer*weighted_sums(i+1)%out_layer
+        sgd_out(i)%biases = weighted_sums(i+1)%out_layer
+        ! Deallocating unnecessary arrays
+        deallocate(activations(i+1)%out_layer)
+        ! Derivative of weights and activations in last/next (depending on perspective) layer
+        do j = 1, size(activations(i)%out_layer)
+            sgd_out(i)%weights(j, :) = weighted_sums(i+1)%out_layer * activations(i)%out_layer(j)
+        end do
+        ! After being used, can now be reassigned to its derivative
+        activations(i)%out_layer = matmul(weighted_sums(i+1)%out_layer, transpose(net(i)%weights))
+        ! Deallocating unnecessary arrays
+        deallocate(weighted_sums(i+1)%out_layer)
+    end do
+
+    ! Deallocate
+    deallocate(activations(1)%out_layer)
+    deallocate(weighted_sums(1)%out_layer)
+end subroutine sgd_replace
+
+! For use in multiprocessing; does not reset values to zero (use with sgd_replace)
+! dimension(network layers, number of batches) for sgd_arr
+subroutine update_params_multiple(net, sgd_arr, learning_rate, num_batches)
+    implicit none
+
+    type(net_layer), dimension(:), intent(INOUT) :: net
+    type(net_layer), dimension(:, :), intent(IN) :: sgd_arr
+    real, intent(IN) :: learning_rate
+    integer, intent(IN) :: num_batches
+    real :: lr
+    integer :: i, j
+    lr = learning_rate/num_batches
+
+    do i = 1, size(sgd_arr, 1)
+        do j = 1, size(sgd_arr, 2)
+            net(i)%weights = net(i)%weights - lr * sgd_arr(i, j)%weights
+            net(i)%biases = net(i)%biases - lr * sgd_arr(i, j)%biases
+        end do
+    end do
+end subroutine update_params_multiple
 
 ! Stolen from last year - update params: weight_new = weight - learning_rate * dC/dweight
 subroutine update_params(net, sgd_arr, learning_rate, num_batches)

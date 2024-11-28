@@ -7,7 +7,7 @@ program fNetwork
     integer :: i, j
     type(net_layer), dimension(2) :: fn
     a = "ss"
-    fn = init_net(ln, a)
+    call init_net(fn, ln, a)
     do i = 1, 2
         do j = 1, ln(i)
             print *, fn(i)%weights(j,:)
