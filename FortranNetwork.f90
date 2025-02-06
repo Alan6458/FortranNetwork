@@ -36,7 +36,7 @@ subroutine init_net(out_net, layer_nodes, activation)
         out_net(i)%activation = activation(i:i)
         out_net(i)%layer_size = layer_nodes(i+1)
 
-        ! generates random floats between 0 and 1 and makes them between -2.718 and 2.718
+        ! generates random floats between 0 and 1 and makes them between -1 and 1
         call random_number(out_net(i)%weights)
         out_net(i)%weights = out_net(i)%weights * 2 - 1
 
