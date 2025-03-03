@@ -4,6 +4,8 @@ CrapPyNetwork but it's written in FORTRAN and better
 
 Made for Science Research 2023-2024
 
+Updated for Science Research 2024-2025
+
 ## Why you should use FortranNetwork
 
 You probably shouldn't - this was made to further my own understanding of neural networks and FORTRAN. But if you really want to, I won't stop you.
