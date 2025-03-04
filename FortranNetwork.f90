@@ -122,8 +122,7 @@ subroutine activation_func_derivative(node_vals, activation_type)
     else if (activation_type == "r") then
         ! ReLU
         ! node_vals = (node_vals/abs(node_vals)+1)/2
-        where (node_vals >= 0.0) node_vals = 1.0
-        where (node_vals < 0.0) node_vals = 0.0
+        node_vals = merge(0.0, 1.0, node_vals < 0.0)
     else if (activation_type == "S") then
         ! SiLU
         node_vals = (1+exp(-node_vals)*(1+node_vals))/((1+exp(-node_vals))**2)
@@ -165,8 +164,7 @@ subroutine cost_func_derivative(node_vals, goal, cost_type)
     else if (cost_type == "a") then
         ! Mean Absolute Error (MAE)
         ! node_vals = node_vals/abs(node_vals)
-        where (node_vals >= 0.0) node_vals = 1.0
-        where (node_vals < 0.0) node_vals = -1.0
+        node_vals = merge(-1.0, 1.0, node_vals < 0.0)
     else if (cost_type == "c") then
         ! Softmax Cross-Entropy Loss
         node_vals = exp(node_vals)/sum(exp(node_vals))-goal
